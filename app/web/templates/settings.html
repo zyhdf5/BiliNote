@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}配置 · BiliNote Summary{% endblock %}
+{% block content %}
+<div class="page-head"><div><p class="eyebrow">SETTINGS</p><h1>最小化配置</h1><p class="muted">LLM、字幕与 Cookie 可热加载；Whisper/GPU 参数修改后需要重启服务。</p></div></div>
+{% if saved %}<div class="notice">配置已保存并重新执行运行环境检查。</div>{% endif %}
+<section class="panel system-panel">
+  <div class="panel-head"><h2>运行环境</h2><span class="status {% if system.ok %}succeeded{% else %}failed{% endif %}">{% if system.ok %}READY{% else %}CHECK{% endif %}</span></div>
+  <div class="check-grid">
+    {% for name, check in system.checks.items() %}
+      <div><span>{{ name }}</span><strong class="{% if check.ok %}good{% else %}bad{% endif %}">{% if check.ok %}OK{% else %}FAIL{% endif %}</strong><small>{{ check.reason or check.gpus or check.path or check.version or '' }}</small></div>
+    {% endfor %}
+  </div>
+  <div class="test-actions">
+    <button type="button" data-test="/api/v1/settings/test-llm">测试 LLM</button>
+    <button type="button" data-test="/api/v1/system/test-gpu">测试 GPU</button>
+    <button type="button" data-test="/api/v1/system/test-asr">加载 Whisper 模型</button>
+    <span id="test-result" class="muted"></span>
+  </div>
+</section>
+<form method="post" action="/settings" class="settings-grid">
+<input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}">
+<section class="panel">
+  <h2>LLM</h2>
+  <label>API URL<input name="llm_base_url" value="{{ cfg.llm.base_url }}" placeholder="http://host:8000/v1"></label>
+  <label>API Key<input name="llm_api_key" type="password" autocomplete="new-password" placeholder="{% if cfg.llm.api_key_configured %}已配置；留空保持{% else %}未配置{% endif %}"></label>
+  <label>Model<input name="llm_model" value="{{ cfg.llm.model }}"></label>
+  <label>Temperature<input name="temperature" type="number" min="0" max="2" step="0.1" value="{{ cfg.llm.temperature }}"></label>
+</section>
+<section class="panel">
+  <h2>Whisper / GPU</h2>
+  <p><strong>Model：</strong>{{ cfg.asr.model }}</p>
+  <p><strong>Device：</strong>{{ cfg.asr.device }}</p>
+  <p><strong>Compute Type：</strong>{{ cfg.asr.compute_type }}</p>
+  <p><strong>Concurrency：</strong>{{ cfg.asr.concurrency }}</p>
+  <p class="muted">为避免旧 CTranslate2 模型尚占用显存时加载第二份模型，ASR 参数不支持热切换。请编辑 config.yaml 后重启容器。</p>
+</section>
+<section class="panel">
+  <h2>通用视频源</h2>
+  <label class="checkbox"><input name="generic_prefer_subtitle" type="checkbox" {% if cfg.video.prefer_subtitle %}checked{% endif %}> 优先使用站点字幕 / 自动字幕</label>
+  <label>yt-dlp Cookies 文件<input name="generic_cookies_file" value="{{ cfg.video.cookies_file }}" placeholder="/cookies/cookies.txt（可选）"></label>
+  <p class="muted">允许的视频域名由 config.yaml 的 video.allowed_domains 控制；安全策略不能通过网页放宽。</p>
+</section>
+<section class="panel">
+  <h2>Bilibili</h2>
+  <label class="checkbox"><input name="prefer_subtitle" type="checkbox" {% if cfg.bilibili.prefer_subtitle %}checked{% endif %}> 优先使用 B 站专用字幕接口</label>
+  <label>Cookie / SESSDATA<textarea name="bilibili_cookie" rows="3" placeholder="{% if cfg.bilibili.cookie_configured %}已配置；留空保持{% else %}可选：AI 字幕、受限视频或风控时可能需要{% endif %}"></textarea></label>
+</section>
+<div class="actions span-2"><button type="submit">保存配置</button></div>
+</form>
+<script src="/static/settings.js" defer></script>
+{% endblock %}

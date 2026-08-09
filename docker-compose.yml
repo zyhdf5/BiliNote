@@ -1,0 +1,38 @@
+services:
+  video-summary:
+    build:
+      context: .
+      args:
+        BASE_REGISTRY: ${BASE_REGISTRY:-docker.io}
+        PIP_INDEX: ${PIP_INDEX:-https://pypi.org/simple}
+    container_name: bilinote-summary
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      HF_ENDPOINT: ${HF_ENDPOINT:-https://hf-mirror.com}
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+      TZ: ${TZ:-Asia/Shanghai}
+    ports:
+      - "127.0.0.1:${APP_PORT:-8080}:8080"
+    volumes:
+      - ./config.yaml:/app/config.yaml
+      - ./data:/data
+      - ./models:/models
+      - ./cookies:/cookies:ro
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

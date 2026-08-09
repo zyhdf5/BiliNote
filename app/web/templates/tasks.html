@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}任务 · BiliNote Summary{% endblock %}
+{% block content %}
+<div class="page-head"><div><p class="eyebrow">TASKS</p><h1>任务历史</h1></div></div>
+<section class="panel">
+{% if tasks %}
+  <div class="task-list">
+  {% for task in tasks %}
+    <a class="task-row" href="/tasks/{{ task.id }}">
+      <span class="task-title">{{ task.title or task.url }}</span>
+      <span class="status {{ task.status }}">{{ task.status }}</span>
+      <span>{{ task.stage }}</span><span class="progress">{{ task.progress }}%</span>
+    </a>
+  {% endfor %}
+  </div>
+{% else %}<p class="muted">还没有任务。</p>{% endif %}
+</section>
+{% endblock %}

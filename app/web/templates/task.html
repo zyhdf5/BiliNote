@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{{ task.title or '任务' }} · BiliNote Summary{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><p class="eyebrow">TASK {{ task.id[:8] }}</p><h1>{{ task.title or '视频处理中' }}</h1><p class="muted url">{{ task.url }}</p></div>
+  <span class="status large {{ task.status }}">{{ task.status }}</span>
+</div>
+<section class="panel metrics">
+  <div><span>阶段</span><strong>{{ task.stage }}</strong></div>
+  <div><span>进度</span><strong>{{ task.progress }}%</strong></div>
+  <div><span>字幕源</span><strong>{{ task.transcript_source or '-' }}</strong></div>
+  {% if task.result and task.result.video %}<div><span>视频源</span><strong>{{ task.result.video.platform }}</strong></div>{% endif %}
+</section>
+<div class="bar"><i style="width:{{ task.progress }}%"></i></div>
+{% if task.status in ['queued','running'] %}
+<div class="task-actions"><form method="post" action="/tasks/{{ task.id }}/cancel"><input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}"><button class="danger-btn" type="submit">取消任务</button></form></div>
+<meta http-equiv="refresh" content="3">
+<p class="muted">页面每 3 秒自动刷新。下载/FFmpeg 会立即响应取消；正在执行的 Faster-Whisper 原生推理可能在当前转写返回后完成取消。</p>
+{% endif %}
+{% if task.error %}<section class="panel error"><h2>失败原因</h2><pre>{{ task.error }}</pre></section>{% endif %}
+{% if summary_html %}<article class="panel prose">{{ summary_html | safe }}</article>{% endif %}
+{% if task.log_tail %}<details class="panel log-panel"><summary>运行日志</summary><pre>{{ task.log_tail }}</pre><a href="/api/v1/tasks/{{ task.id }}/log" target="_blank">查看更长日志</a></details>{% endif %}
+{% endblock %}

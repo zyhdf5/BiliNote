@@ -1,0 +1,11 @@
+.git
+.pytest_cache
+__pycache__
+*.pyc
+.venv
+venv
+data
+models
+cookies/*.txt
+.env
+*.zip

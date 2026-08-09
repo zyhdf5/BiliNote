@@ -1,0 +1,12 @@
+fastapi==0.116.2
+uvicorn[standard]==0.34.0
+httpx==0.28.1
+pydantic==2.11.2
+PyYAML==6.0.2
+Jinja2==3.1.6
+python-multipart==0.0.20
+Markdown==3.8
+bleach==6.2.0
+yt-dlp==2026.7.4
+faster-whisper==1.2.1
+ctranslate2==4.8.1

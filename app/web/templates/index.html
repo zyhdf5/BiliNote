@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}视频总结 · BiliNote Summary{% endblock %}
+{% block content %}
+<section class="hero">
+  <p class="eyebrow">VIDEO → SUMMARY</p>
+  <h1>把一个视频链接，压缩成可用的内容。</h1>
+  <p class="muted">Bilibili 使用专用字幕接口；YouTube、抖音、快手及其它 yt-dlp 可识别站点优先尝试站点字幕，没有字幕时自动下载音频并使用 Faster-Whisper。</p>
+  <form method="post" action="/submit" class="submit-row">
+    <input type="hidden" name="csrf_token" value="{{ request.state.csrf_token }}">
+    <input name="url" type="url" required placeholder="https://www.bilibili.com/video/BV... 或 https://www.youtube.com/watch?v=...">
+    <button type="submit">开始分析</button>
+  </form>
+</section>
+<section class="panel">
+  <div class="panel-head"><h2>最近任务</h2><a href="/tasks">查看全部 →</a></div>
+  {% if tasks %}
+  <div class="task-list">
+    {% for task in tasks %}
+      <a class="task-row" href="/tasks/{{ task.id }}">
+        <span class="task-title">{{ task.title or task.url }}</span>
+        <span class="status {{ task.status }}">{{ task.stage }}</span>
+        <span class="progress">{{ task.progress }}%</span>
+      </a>
+    {% endfor %}
+  </div>
+  {% else %}<p class="muted">还没有任务。</p>{% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,4 @@
+This project is a focused reimplementation inspired by the architecture and behavior of BiliNote:
+https://github.com/JefferyHcool/BiliNote
+
+BiliNote is licensed under the MIT License. This refactor keeps only the video-summary workflow and intentionally removes the original RAG, rich note editing and export subsystems. Bilibili uses a dedicated adapter; other online video sources use a generic yt-dlp adapter.
