@@ -40,7 +40,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ ALIYUN_REGISTRY }}/${{ ALIYUN_NAME_SPACE }}/${{ matrix.image_name }}
+          images: ${{ env.ALIYUN_REGISTRY }}/${{ env.ALIYUN_NAME_SPACE }}/${{ matrix.image_name }}
           tags: |
             type=raw,value=latest
             type=ref,event=tag
