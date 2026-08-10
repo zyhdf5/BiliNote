@@ -19,12 +19,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - image_name: knowledgehub
+          - image_name: bilinote
             dockerfile: Dockerfile
             context: .
-          - image_name: knowledgehub-postgres
-            dockerfile: postgres/Dockerfile
-            context: postgres
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
