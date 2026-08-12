@@ -40,8 +40,8 @@ class LLMHandler(BaseHTTPRequestHandler):
 
 
 def make_fake_ytdlp(bin_dir: Path) -> None:
-    path = bin_dir / "yt-dlp"
-    path.write_text(
+    script = bin_dir / "fake_ytdlp.py"
+    script.write_text(
         """#!/usr/bin/env python3
 import json, os, sys
 args=sys.argv[1:]
@@ -62,7 +62,22 @@ raise SystemExit(2)
 """,
         encoding="utf-8",
     )
-    path.chmod(path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+    script.chmod(script.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
+    if os.name == "nt":
+        # asyncio.create_subprocess_exec can launch a .cmd shim discovered via
+        # PATHEXT, while an extensionless POSIX script is ignored on Windows.
+        (bin_dir / "yt-dlp.cmd").write_text(
+            f'@"{sys.executable}" "{script}" %*\r\n',
+            encoding="utf-8",
+        )
+        (bin_dir / "ffmpeg.cmd").write_text("@exit /b 0\r\n", encoding="utf-8")
+    else:
+        ytdlp = bin_dir / "yt-dlp"
+        ytdlp.symlink_to(script.name)
+        ffmpeg = bin_dir / "ffmpeg"
+        ffmpeg.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        ffmpeg.chmod(ffmpeg.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
 
 def main() -> int:
@@ -101,7 +116,7 @@ asr:
   device: cpu
   compute_type: int8
   language: zh
-  model_dir: "{root / 'models'}"
+  model_dir: "{(root / 'models').as_posix()}"
   concurrency: 1
 llm:
   base_url: "http://127.0.0.1:{port}/v1"
@@ -113,7 +128,7 @@ llm:
   retries: 0
   retry_backoff_seconds: 0.1
 summary:
-  prompt_file: "{PROJECT / 'prompts' / 'summary.md'}"
+  prompt_file: "{(PROJECT / 'prompts' / 'summary.md').as_posix()}"
   chunk_chars: 4000
   parallel: 1
 task:
@@ -121,8 +136,8 @@ task:
   retain_days: 7
   cleanup_interval_seconds: 3600
   max_queue_size: 4
-  work_dir: "{root / 'data' / 'tasks'}"
-  db_path: "{root / 'data' / 'tasks.db'}"
+  work_dir: "{(root / 'data' / 'tasks').as_posix()}"
+  db_path: "{(root / 'data' / 'tasks.db').as_posix()}"
   download_timeout_seconds: 30
   ffmpeg_timeout_seconds: 30
   task_timeout_seconds: 60

@@ -104,13 +104,15 @@ async def test_gpu(request: Request):
 
 @router.post("/system/test-asr")
 async def test_asr(request: Request):
+    """Start an asynchronous Whisper download+load; poll /system/asr-status."""
     verify_browser_api_write(request)
-    result = await request.app.state.system_checker.run(preload_asr=True)
-    request.app.state.system_status = result
-    check = result.get("checks", {}).get("asr_model", {"ok": False, "reason": "ASR check not executed"})
-    if not check.get("ok"):
-        raise HTTPException(503, check.get("reason") or "ASR check failed")
-    return check
+    pipeline = request.app.state.task_manager.pipeline
+    return pipeline.start_asr_preload()
+
+
+@router.get("/system/asr-status")
+async def asr_status(request: Request):
+    return request.app.state.task_manager.pipeline.asr_status()
 
 
 @router.post("/system/cleanup")

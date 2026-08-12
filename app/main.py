@@ -21,6 +21,20 @@ CONFIG_PATH = os.getenv("APP_CONFIG", "/app/config.yaml")
 if not Path(CONFIG_PATH).exists() and Path("config.yaml").exists():
     CONFIG_PATH = "config.yaml"
 
+# Non-Docker runs (IDE, plain `python run.py`) do not inherit the PATH prepared
+# by scripts/start_local.sh. Make the project-local portable FFmpeg always
+# discoverable so yt-dlp postprocessing and the ASR pipeline work regardless
+# of how the process was launched. On Windows, CTranslate2 loads cuBLAS/cuDNN
+# from PATH as well, so include the pip-installed nvidia-* runtime DLL dirs.
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+_EXTRA_PATH_DIRS = [
+    _REPO_ROOT / "tools" / "ffmpeg" / "bin",
+    _REPO_ROOT / ".venv" / "Lib" / "site-packages" / "nvidia" / "cublas" / "bin",
+    _REPO_ROOT / ".venv" / "Lib" / "site-packages" / "nvidia" / "cudnn" / "bin",
+]
+for _dir in reversed([d for d in _EXTRA_PATH_DIRS if d.is_dir()]):
+    os.environ["PATH"] = str(_dir) + os.pathsep + os.environ["PATH"]
+
 config_manager = ConfigManager(CONFIG_PATH)
 task_manager = TaskManager(config_manager)
 system_checker = SystemChecker(config_manager, task_manager.pipeline)

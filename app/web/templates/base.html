@@ -4,14 +4,25 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="csrf-token" content="{{ request.state.csrf_token }}">
+  <meta name="description" content="把 Bilibili、YouTube 等视频链接转成结构化的文字总结。">
+  <meta name="theme-color" content="#f5f6f8">
   <title>{% block title %}BiliNote Summary{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400..700&display=swap">
   <link rel="stylesheet" href="/static/app.css">
 </head>
 <body>
+<a class="skip-link" href="#main">跳到主要内容</a>
 <header class="topbar">
   <a class="brand" href="/">BiliNote Summary</a>
-  <nav><a href="/">总结</a><a href="/tasks">任务</a><a href="/settings">配置</a></nav>
+  <nav>
+    <a href="/" {% if request.url.path == '/' %}class="active" aria-current="page"{% endif %}>总结</a>
+    <a href="/tasks" {% if request.url.path.startswith('/tasks') %}class="active" aria-current="page"{% endif %}>任务</a>
+    <a href="/settings" {% if request.url.path.startswith('/settings') %}class="active" aria-current="page"{% endif %}>配置</a>
+  </nav>
 </header>
-<main class="container">{% block content %}{% endblock %}</main>
+<main id="main" class="container">{% block content %}{% endblock %}</main>
 </body>
 </html>

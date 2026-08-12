@@ -40,3 +40,6 @@ logs/
 
 # Docker
 *.pid
+/tools/
+/config.local.yaml
+/models/

@@ -1,4 +1,8 @@
 .git
+.github
+.agents
+.idea
+.vscode
 .pytest_cache
 __pycache__
 *.pyc
@@ -6,6 +10,11 @@ __pycache__
 venv
 data
 models
-cookies/*.txt
-.env
+cookies
+.env*
+config.local.yaml
+requirements-dev.txt
+tests
+scripts
+*.md
 *.zip

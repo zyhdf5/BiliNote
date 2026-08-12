@@ -142,6 +142,13 @@ class YtDlpDownloader:
         return args
 
     @staticmethod
+    def _executable() -> str:
+        # Resolve once per invocation so Windows PATHEXT shims (.cmd/.bat) and
+        # project-local wrappers selected by PATH are passed to CreateProcess
+        # as an absolute path. A bare name can otherwise skip those shims.
+        return shutil.which("yt-dlp") or "yt-dlp"
+
+    @staticmethod
     def _cleanup_temp_cookie(path: str | None) -> None:
         if path:
             try:
@@ -152,7 +159,7 @@ class YtDlpDownloader:
     async def probe_metadata(self, url: str, log_path: Path) -> VideoMeta:
         cookie_args, temp_cookie = self._cookie_args(url)
         try:
-            cmd = ["yt-dlp", *self._common_args(url, cookie_args), "--dump-single-json", "--skip-download", url]
+            cmd = [self._executable(), *self._common_args(url, cookie_args), "--dump-single-json", "--skip-download", url]
             output = await run_logged_process(
                 cmd,
                 timeout=min(self.task_cfg.download_timeout_seconds, 300),
@@ -194,7 +201,7 @@ class YtDlpDownloader:
             cookie_args, temp_cookie = self._cookie_args(url)
             try:
                 cmd = [
-                    "yt-dlp",
+                    self._executable(),
                     *self._common_args(url, cookie_args),
                     "--skip-download",
                     flag,
@@ -251,7 +258,7 @@ class YtDlpDownloader:
         cookie_args, temp_cookie = self._cookie_args(url)
         try:
             cmd = [
-                "yt-dlp",
+                self._executable(),
                 *self._common_args(url, cookie_args),
                 "--extract-audio",
                 "--audio-format", "mp3",

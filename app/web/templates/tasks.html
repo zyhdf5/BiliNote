@@ -2,7 +2,7 @@
 {% block title %}任务 · BiliNote Summary{% endblock %}
 {% block content %}
 <div class="page-head"><div><p class="eyebrow">TASKS</p><h1>任务历史</h1></div></div>
-<section class="panel">
+<section class="panel" id="tasks-panel">
 {% if tasks %}
   <div class="task-list">
   {% for task in tasks %}
@@ -13,6 +13,13 @@
     </a>
   {% endfor %}
   </div>
-{% else %}<p class="muted">还没有任务。</p>{% endif %}
+{% else %}
+  <div class="empty">
+    <span class="empty-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13h4l2 3h6l2-3h4"/><path d="M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/></svg></span>
+    <p class="empty-title">还没有任务</p>
+    <p class="muted"><a href="/">回到首页</a>提交一个视频链接开始。</p>
+  </div>
+{% endif %}
 </section>
+<script src="/static/tasks.js" defer></script>
 {% endblock %}

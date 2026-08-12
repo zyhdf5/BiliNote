@@ -288,6 +288,7 @@ Windows PowerShell：
 ## 本地测试
 
 ```bash
+python -m pip install -r requirements-dev.txt
 python -m compileall -q app tests run.py
 python -m pytest -q
 python scripts/runtime_smoke.py

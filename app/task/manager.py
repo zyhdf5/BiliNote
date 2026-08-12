@@ -108,13 +108,8 @@ class TaskManager:
             append_task_log(self._task_log(task_id), "task cancellation requested")
             active.cancel()
         else:
-            self.repo.update(
-                task_id,
-                status="canceled",
-                stage="canceled",
-                error="task canceled before execution",
-                finished_at=utcnow_iso(),
-            )
+            # 排队中的任务取消后直接删除记录与工作目录。
+            self._purge(task_id)
         return True
 
     async def delete(self, task_id: str) -> bool:
@@ -126,10 +121,13 @@ class TaskManager:
             active = self.active.get(task_id)
             if active:
                 await asyncio.gather(active, return_exceptions=True)
+        self._purge(task_id)
+        return True
+
+    def _purge(self, task_id: str) -> None:
         work_dir = Path(self.config_manager.get().task.work_dir) / task_id
         shutil.rmtree(work_dir, ignore_errors=True)
         self.repo.delete(task_id)
-        return True
 
     async def _worker(self, index: int):
         while True:
@@ -145,14 +143,8 @@ class TaskManager:
                 except asyncio.CancelledError:
                     if asyncio.current_task().cancelling():
                         raise
-                    self.repo.update(
-                        task_id,
-                        status="canceled",
-                        stage="canceled",
-                        error="task canceled by user",
-                        finished_at=utcnow_iso(),
-                    )
-                    append_task_log(self._task_log(task_id), "task canceled by user")
+                    # 用户取消的任务直接删除记录与工作目录，不保留在历史中。
+                    self._purge(task_id)
                 finally:
                     self.active.pop(task_id, None)
             finally:

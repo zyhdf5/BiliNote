@@ -14,7 +14,7 @@ Run-Step "python version" { docker exec $Service python --version }
 Run-Step "yt-dlp version" { docker exec $Service yt-dlp --version }
 Run-Step "ffmpeg version" { docker exec $Service ffmpeg -version }
 Run-Step "nvidia-smi" { docker exec $Service nvidia-smi }
-Run-Step "CTranslate2 CUDA discovery" { docker exec $Service python -c 'import ctranslate2; n=ctranslate2.get_cuda_device_count(); print("CTranslate2 CUDA devices:", n); raise SystemExit(0 if n > 0 else 2)' }
+Run-Step "CTranslate2 CUDA discovery" { docker exec $Service python -c 'import ctranslate2; n=ctranslate2.get_cuda_device_count(); print(n); raise SystemExit(0 if n > 0 else 2)' }
 
 Write-Host "`n> GET $BaseUrl/healthz"
 Invoke-RestMethod "$BaseUrl/healthz" | ConvertTo-Json -Depth 8

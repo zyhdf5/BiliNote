@@ -1,48 +1,38 @@
 server:
   host: 0.0.0.0
   port: 8080
-
 security:
-  web_username: "${WEB_USERNAME}"
-  web_password: "${WEB_PASSWORD}"
-
+  web_username: ${WEB_USERNAME}
+  web_password: ${WEB_PASSWORD}
 video:
-  prefer_subtitle: true
+  prefer_subtitle: false
   subtitle_languages:
-    - zh-Hans
-    - zh-Hant
-    - zh.*
-    - en.*
-  # Netscape cookies.txt for yt-dlp authenticated extractors.
-  cookies_file: ""
+  - zh-Hans
+  - zh-Hant
+  - zh.*
+  - en.*
+  cookies_file: ''
   request_timeout_seconds: 20
-  # Application-level SSRF guard. For Internet-facing deployments, also block
-  # RFC1918/link-local/cloud-metadata egress at the Docker/K8s/network layer.
   allow_private_urls: false
-  # Generic arbitrary URLs are disabled by default. Add domains explicitly.
   allow_unlisted_domains: false
   allowed_domains:
-    - bilibili.com
-    - b23.tv
-    - youtube.com
-    - youtu.be
-    - douyin.com
-    - iesdouyin.com
-    - kuaishou.com
-    - tiktok.com
-
+  - bilibili.com
+  - b23.tv
+  - youtube.com
+  - youtu.be
+  - douyin.com
+  - iesdouyin.com
+  - kuaishou.com
+  - tiktok.com
 bilibili:
   prefer_subtitle: true
-  cookie: "${BILIBILI_COOKIE}"
+  cookie: d91dff48%2C1794124024%2C2f8ec%2A52CjAbnLFLFfyvz2-rjbHuQIq5Z3ADhCgpApDbT1s86h_wdRBsRK_h4uISzLXkpJ0F1MkSVkJIRmRuWVZWVGZINnRlOThPRzBsT1dDT3RqSUtrLVJ5MkItQWVxaUpKUVJnWF9pT0k5YktJOFRYVGw1ZkprRXk2SkFqRWptRWZXOE9TRDJLMFplQWR3IIEC
   request_timeout_seconds: 15
   retries: 3
   retry_backoff_seconds: 1.0
-
-# ASR settings are restart-required. They are intentionally not hot-editable
-# from the Web/API because native CTranslate2 models can remain resident on GPU.
 asr:
   enabled: true
-  model: large-v3
+  model: medium
   device: cuda
   compute_type: float16
   language: zh
@@ -51,22 +41,19 @@ asr:
   model_dir: /models
   concurrency: 1
   preload_model: false
-
 llm:
-  base_url: "${LLM_BASE_URL}"
-  api_key: "${LLM_API_KEY}"
-  model: "${LLM_MODEL}"
+  base_url: http://10.10.234.107:8000/v1
+  api_key: ${LLM_API_KEY}
+  model: qwen3.5-9b
   temperature: 0.2
   max_tokens: 4096
   timeout_seconds: 300
   retries: 2
   retry_backoff_seconds: 1.0
-
 summary:
   prompt_file: /app/prompts/summary.md
   chunk_chars: 24000
   parallel: 3
-
 task:
   concurrency: 2
   max_queue_size: 20
@@ -76,14 +63,12 @@ task:
   db_path: /data/tasks.db
   download_timeout_seconds: 1800
   ffmpeg_timeout_seconds: 600
-  # Soft timeout: native Whisper is allowed to finish safely before GPU release.
   task_timeout_seconds: 7200
   ytdlp_retries: 5
   ytdlp_fragment_retries: 5
   max_video_duration_seconds: 14400
   max_download_mb: 2048
   min_free_disk_gb: 2.0
-
 system:
   startup_check: true
   fail_startup_on_error: false

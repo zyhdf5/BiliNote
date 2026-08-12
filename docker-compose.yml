@@ -5,13 +5,13 @@ services:
       args:
         BASE_REGISTRY: ${BASE_REGISTRY:-docker.io}
         PIP_INDEX: ${PIP_INDEX:-https://pypi.org/simple}
+        APT_MIRROR: ${APT_MIRROR:-mirrors.tuna.tsinghua.edu.cn}
     container_name: bilinote-summary
     restart: unless-stopped
     env_file:
       - .env
     environment:
       HF_ENDPOINT: ${HF_ENDPOINT:-https://hf-mirror.com}
-      NVIDIA_VISIBLE_DEVICES: all
       NVIDIA_DRIVER_CAPABILITIES: compute,utility
       TZ: ${TZ:-Asia/Shanghai}
     ports:

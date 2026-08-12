@@ -52,6 +52,31 @@ async def test_model_load_cancellation_does_not_start_second_native_load():
     assert transcriber._model is model
 
 
+def test_disabled_asr_preload_does_not_start_background_work():
+    transcriber = FasterWhisperTranscriber(ASRConfig(enabled=False, device="cpu", compute_type="int8"))
+    result = transcriber.start_preload()
+    assert result["state"] == "error"
+    assert result["error"] == "ASR is disabled"
+    assert transcriber._preload_task is None
+
+
+@pytest.mark.asyncio
+async def test_background_asr_preload_consumes_load_failure():
+    transcriber = FasterWhisperTranscriber(ASRConfig(device="cpu", compute_type="int8"))
+
+    def fail_load():
+        raise RuntimeError("model unavailable")
+
+    transcriber._load_model_sync = fail_load
+    result = transcriber.start_preload()
+    assert result["state"] == "starting"
+    task = transcriber._preload_task
+    assert task is not None
+    await task
+    assert transcriber.status()["state"] == "error"
+    assert "model unavailable" in transcriber.status()["error"]
+
+
 def test_asr_hot_update_is_rejected(tmp_path: Path):
     config = tmp_path / "config.yaml"
     config.write_text("{}\n", encoding="utf-8")

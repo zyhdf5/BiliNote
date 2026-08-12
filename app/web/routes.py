@@ -34,7 +34,8 @@ async def submit(request: Request, url: str = Form(...), csrf_token: str = Form(
 async def cancel_task_page(task_id: str, request: Request, csrf_token: str = Form(...)):
     verify_csrf_form(request, csrf_token)
     await request.app.state.task_manager.cancel(task_id)
-    return RedirectResponse(f"/tasks/{task_id}", status_code=303)
+    # 取消的任务会被直接删除，回到列表页。
+    return RedirectResponse("/tasks", status_code=303)
 
 
 @router.get("/tasks", response_class=HTMLResponse)

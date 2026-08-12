@@ -26,6 +26,12 @@ class VideoSummaryPipeline:
     async def preload_asr(self) -> dict:
         return await self._asr.preload()
 
+    def start_asr_preload(self) -> dict:
+        return self._asr.start_preload()
+
+    def asr_status(self) -> dict:
+        return self._asr.status()
+
     async def run(self, url: str, task_dir: Path, progress: Progress) -> SummaryResult:
         cfg = self.config_manager.get()
         task_log = task_dir / "task.log"
