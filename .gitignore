@@ -1,45 +1,4 @@
-# Environment & secrets
 .env
-*.env
-!.env.example
-
-# Runtime data (downloaded videos / notes)
-data/
-downloads/
-output/
-
-# Bilibili login state / cookies
-cookies/*
-!cookies/.gitkeep
-
-# Model files
-models/*
-!models/.gitkeep
-
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
-.venv/
-venv/
-env/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-
-# IDE / OS
-.idea/
-.vscode/
-*.swp
-.DS_Store
-Thumbs.db
-
-# Logs
+cookies/
 *.log
-logs/
-
-# Docker
-*.pid
-/tools/
-/config.local.yaml
-/models/
+bin/

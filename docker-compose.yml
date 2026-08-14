@@ -1,38 +1,55 @@
 services:
-  video-summary:
+  postgres:
+    image: postgres:17-alpine
+    container_name: bilinote-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bilinote
+      POSTGRES_PASSWORD: bilinote
+      POSTGRES_DB: bilinote
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bilinote -d bilinote"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  bilinote:
     build:
       context: .
       args:
-        BASE_REGISTRY: ${BASE_REGISTRY:-docker.io}
-        PIP_INDEX: ${PIP_INDEX:-https://pypi.org/simple}
-        APT_MIRROR: ${APT_MIRROR:-mirrors.tuna.tsinghua.edu.cn}
-    container_name: bilinote-summary
+        YTDLP_VERSION: ${YTDLP_VERSION:-latest}
+    container_name: bilinote-go
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     env_file:
       - .env
     environment:
-      HF_ENDPOINT: ${HF_ENDPOINT:-https://hf-mirror.com}
-      NVIDIA_DRIVER_CAPABILITIES: compute,utility
-      TZ: ${TZ:-Asia/Shanghai}
+      DATABASE_URL: postgres://bilinote:bilinote@postgres:5432/bilinote?sslmode=disable
+      CONFIG_FILE: /app/config.yaml
+      MIGRATION_FILE: /app/migrations/001_init.sql
     ports:
       - "127.0.0.1:${APP_PORT:-8080}:8080"
     volumes:
-      - ./config.yaml:/app/config.yaml
-      - ./data:/data
-      - ./models:/models
       - ./cookies:/cookies:ro
-    security_opt:
-      - no-new-privileges:true
-    stop_grace_period: 30s
+    tmpfs:
+      - /tmp/bilinote:size=4g,mode=1777
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
     logging:
       driver: json-file
       options:
         max-size: "20m"
         max-file: "3"
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
+
+volumes:
+  postgres_data:

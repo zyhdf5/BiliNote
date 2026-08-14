@@ -1,75 +1,74 @@
 server:
-  host: 0.0.0.0
-  port: 8080
-security:
-  web_username: ${WEB_USERNAME}
-  web_password: ${WEB_PASSWORD}
+  addr: ":8080"
+  shutdown_timeout: 15s
+
+postgres:
+  dsn: "${DATABASE_URL}"
+
+workspace:
+  root: /tmp/bilinote
+  stale_after: 24h
+
+worker:
+  concurrency: 2
+  poll_interval: 2s
+  lease_duration: 2m
+  max_attempts: 3
+
 video:
-  prefer_subtitle: false
-  subtitle_languages:
-  - zh-Hans
-  - zh-Hant
-  - zh.*
-  - en.*
-  cookies_file: ''
-  request_timeout_seconds: 20
+  prefer_subtitle: true
+  subtitle_languages: ["zh-Hans", "zh-Hant", "zh.*", "en.*"]
+  cookies_file: ""
+  proxy: ""
   allow_private_urls: false
   allow_unlisted_domains: false
   allowed_domains:
-  - bilibili.com
-  - b23.tv
-  - youtube.com
-  - youtu.be
-  - douyin.com
-  - iesdouyin.com
-  - kuaishou.com
-  - tiktok.com
+    - bilibili.com
+    - b23.tv
+    - youtube.com
+    - youtu.be
+    - douyin.com
+    - iesdouyin.com
+    - kuaishou.com
+    - tiktok.com
+
 bilibili:
-  prefer_subtitle: true
-  cookie: d91dff48%2C1794124024%2C2f8ec%2A52CjAbnLFLFfyvz2-rjbHuQIq5Z3ADhCgpApDbT1s86h_wdRBsRK_h4uISzLXkpJ0F1MkSVkJIRmRuWVZWVGZINnRlOThPRzBsT1dDT3RqSUtrLVJ5MkItQWVxaUpKUVJnWF9pT0k5YktJOFRYVGw1ZkprRXk2SkFqRWptRWZXOE9TRDJLMFplQWR3IIEC
-  request_timeout_seconds: 15
+  cookie: "${BILIBILI_COOKIE}"
+  request_timeout: 20s
+  retries: 2
+  retry_backoff: 500ms
+
+ytdlp:
+  binary: yt-dlp
+  timeout: 30m
   retries: 3
-  retry_backoff_seconds: 1.0
+  fragment_retries: 5
+  concurrency: 2
+
+ffmpeg:
+  binary: ffmpeg
+  timeout: 15m
+
 asr:
   enabled: true
-  model: medium
-  device: cuda
-  compute_type: float16
+  base_url: "${ASR_BASE_URL}"
+  api_key: "${ASR_API_KEY}"
+  model: "${ASR_MODEL}"
   language: zh
-  beam_size: 5
-  vad_filter: true
-  model_dir: /models
-  concurrency: 1
-  preload_model: false
-llm:
-  base_url: http://10.10.234.107:8000/v1
-  api_key: ${LLM_API_KEY}
-  model: qwen3.5-9b
-  temperature: 0.2
-  max_tokens: 4096
-  timeout_seconds: 300
-  retries: 2
-  retry_backoff_seconds: 1.0
-summary:
-  prompt_file: /app/prompts/summary.md
-  chunk_chars: 24000
-  parallel: 3
-task:
+  timeout: 30m
+  max_retries: 2
   concurrency: 2
-  max_queue_size: 20
-  retain_days: 7
-  cleanup_interval_seconds: 3600
-  work_dir: /data/tasks
-  db_path: /data/tasks.db
-  download_timeout_seconds: 1800
-  ffmpeg_timeout_seconds: 600
-  task_timeout_seconds: 7200
-  ytdlp_retries: 5
-  ytdlp_fragment_retries: 5
-  max_video_duration_seconds: 14400
-  max_download_mb: 2048
-  min_free_disk_gb: 2.0
-system:
-  startup_check: true
-  fail_startup_on_error: false
-  readiness_cache_seconds: 30
+
+llm:
+  base_url: "${LLM_BASE_URL}"
+  api_key: "${LLM_API_KEY}"
+  model: "${LLM_MODEL}"
+  temperature: 0.2
+  max_tokens: 8192
+  timeout: 10m
+  max_retries: 2
+
+summary:
+  chunk_chars: 30000
+  map_concurrency: 4
+  keep_transcript: true
