@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/zyhdf5/bilinote-go/internal/asr"
 	"github.com/zyhdf5/bilinote-go/internal/media"
@@ -23,6 +22,7 @@ type Result struct {
 	Transcript *transcript.Transcript
 	Summary    string
 }
+
 type Pipeline struct {
 	Registry       *video.Registry
 	YTDLP          *ytdlp.Runner
@@ -92,6 +92,18 @@ func (p *Pipeline) Run(ctx context.Context, t *task.Task, update StageUpdater) (
 	if tr == nil || len(tr.Segments) == 0 {
 		return nil, fmt.Errorf("empty transcript")
 	}
+
+	// KnowledgeHub ingestion only needs metadata + transcript. Extraction
+	// tasks stop here and never spend an LLM call on a summary that will be
+	// discarded by the downstream knowledge pipeline.
+	if t.IsExtraction() {
+		_ = step("saving", 95)
+		return &Result{Meta: meta, Transcript: tr}, nil
+	}
+
+	if p.Summarizer == nil {
+		return nil, fmt.Errorf("summarizer is not configured")
+	}
 	_ = step("summarizing", 75)
 	sum, err := p.Summarizer.Summarize(ctx, meta, tr)
 	if err != nil {
@@ -100,5 +112,3 @@ func (p *Pipeline) Run(ctx context.Context, t *task.Task, update StageUpdater) (
 	_ = step("saving", 95)
 	return &Result{Meta: meta, Transcript: tr, Summary: sum}, nil
 }
-
-var _ = time.Second

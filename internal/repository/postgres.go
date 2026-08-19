@@ -40,20 +40,27 @@ func (r *Repository) Migrate(ctx context.Context, path string) error {
 	_, e = r.Pool.Exec(ctx, string(b))
 	return e
 }
-func (r *Repository) Create(ctx context.Context, id, url string) (*task.Task, error) {
-	_, e := r.Pool.Exec(ctx, `INSERT INTO video_tasks(id,source_url,status,stage,progress) VALUES($1,$2,'queued','queued',0)`, id, url)
+func (r *Repository) Create(ctx context.Context, id, url string, kind task.Kind) (*task.Task, error) {
+	if kind == "" {
+		kind = task.KindSummary
+	}
+	if kind != task.KindExtraction && kind != task.KindSummary {
+		return nil, fmt.Errorf("unsupported task kind %q", kind)
+	}
+	_, e := r.Pool.Exec(ctx, `INSERT INTO video_tasks(id,kind,source_url,status,stage,progress) VALUES($1,$2,$3,'queued','queued',0)`, id, string(kind), url)
 	if e != nil {
 		return nil, e
 	}
 	return r.Get(ctx, id)
 }
 func (r *Repository) Get(ctx context.Context, id string) (*task.Task, error) {
-	row := r.Pool.QueryRow(ctx, `SELECT id,source_url,COALESCE(platform,''),COALESCE(source_id,''),COALESCE(title,''),status,stage,progress,COALESCE(transcript_source,''),COALESCE(summary,''),COALESCE(transcript,'null'::jsonb),COALESCE(metadata,'null'::jsonb),attempts,cancel_requested,COALESCE(error,''),created_at,started_at,finished_at FROM video_tasks WHERE id=$1`, id)
+	row := r.Pool.QueryRow(ctx, `SELECT id,COALESCE(kind,'summary'),source_url,COALESCE(platform,''),COALESCE(source_id,''),COALESCE(title,''),status,stage,progress,COALESCE(transcript_source,''),COALESCE(summary,''),COALESCE(transcript,'null'::jsonb),COALESCE(metadata,'null'::jsonb),attempts,cancel_requested,COALESCE(error,''),created_at,started_at,finished_at FROM video_tasks WHERE id=$1`, id)
 	var t task.Task
-	var status string
-	if e := row.Scan(&t.ID, &t.SourceURL, &t.Platform, &t.SourceID, &t.Title, &status, &t.Stage, &t.Progress, &t.TranscriptSource, &t.Summary, &t.Transcript, &t.Metadata, &t.Attempts, &t.CancelRequested, &t.Error, &t.CreatedAt, &t.StartedAt, &t.FinishedAt); e != nil {
+	var kind, status string
+	if e := row.Scan(&t.ID, &kind, &t.SourceURL, &t.Platform, &t.SourceID, &t.Title, &status, &t.Stage, &t.Progress, &t.TranscriptSource, &t.Summary, &t.Transcript, &t.Metadata, &t.Attempts, &t.CancelRequested, &t.Error, &t.CreatedAt, &t.StartedAt, &t.FinishedAt); e != nil {
 		return nil, e
 	}
+	t.Kind = task.Kind(kind)
 	t.Status = task.Status(status)
 	return &t, nil
 }

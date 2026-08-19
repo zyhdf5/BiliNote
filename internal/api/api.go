@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/zyhdf5/bilinote-go/internal/repository"
+	"github.com/zyhdf5/bilinote-go/internal/task"
 	"github.com/zyhdf5/bilinote-go/internal/video"
 )
 
@@ -24,7 +25,10 @@ func (a *API) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { writeJSON(w, 200, map[string]any{"ok": true}) })
 	mux.HandleFunc("GET /readyz", a.ready)
-	mux.HandleFunc("POST /api/v1/summaries", a.create)
+	mux.HandleFunc("POST /api/v1/extractions", a.createExtraction)
+	// Compatibility route for existing summary consumers. New knowledge
+	// ingestion should use /extractions so the pipeline skips the summary LLM.
+	mux.HandleFunc("POST /api/v1/summaries", a.createSummary)
 	mux.HandleFunc("GET /api/v1/tasks/{id}", a.get)
 	mux.HandleFunc("POST /api/v1/tasks/{id}/cancel", a.cancel)
 	return withRecover(withJSON(mux))
@@ -40,7 +44,15 @@ func (a *API) ready(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"ok": true})
 }
 
-func (a *API) create(w http.ResponseWriter, r *http.Request) {
+func (a *API) createExtraction(w http.ResponseWriter, r *http.Request) {
+	a.create(w, r, task.KindExtraction)
+}
+
+func (a *API) createSummary(w http.ResponseWriter, r *http.Request) {
+	a.create(w, r, task.KindSummary)
+}
+
+func (a *API) create(w http.ResponseWriter, r *http.Request, kind task.Kind) {
 	var in struct {
 		URL string `json:"url"`
 	}
@@ -55,7 +67,7 @@ func (a *API) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := newID()
-	t, err := a.Repo.Create(r.Context(), id, in.URL)
+	t, err := a.Repo.Create(r.Context(), id, in.URL, kind)
 	if err != nil {
 		writeJSON(w, 500, map[string]any{"error": "create task failed"})
 		return
@@ -73,7 +85,7 @@ func (a *API) get(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 500, map[string]any{"error": "query failed"})
 		return
 	}
-	out := map[string]any{"id": t.ID, "source_url": t.SourceURL, "platform": t.Platform, "source_id": t.SourceID, "title": t.Title, "status": t.Status, "stage": t.Stage, "progress": t.Progress, "transcript_source": t.TranscriptSource, "summary": t.Summary, "attempts": t.Attempts, "cancel_requested": t.CancelRequested, "error": t.Error, "created_at": t.CreatedAt, "started_at": t.StartedAt, "finished_at": t.FinishedAt}
+	out := map[string]any{"id": t.ID, "kind": t.Kind, "source_url": t.SourceURL, "platform": t.Platform, "source_id": t.SourceID, "title": t.Title, "status": t.Status, "stage": t.Stage, "progress": t.Progress, "transcript_source": t.TranscriptSource, "summary": t.Summary, "attempts": t.Attempts, "cancel_requested": t.CancelRequested, "error": t.Error, "created_at": t.CreatedAt, "started_at": t.StartedAt, "finished_at": t.FinishedAt}
 	if string(t.Transcript) != "" && string(t.Transcript) != "null" {
 		var v any
 		if json.Unmarshal(t.Transcript, &v) == nil {

@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS video_tasks (
     id                  VARCHAR(32) PRIMARY KEY,
+    kind                VARCHAR(32) NOT NULL DEFAULT 'summary' CHECK (kind IN ('extraction','summary')),
     source_url          TEXT NOT NULL,
     platform            VARCHAR(32),
     source_id           VARCHAR(255),
@@ -22,6 +23,12 @@ CREATE TABLE IF NOT EXISTS video_tasks (
     finished_at         TIMESTAMPTZ,
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Safe when applying this idempotent bootstrap migration to a database
+-- created by the earlier worker revision.
+ALTER TABLE video_tasks
+ADD COLUMN IF NOT EXISTS kind VARCHAR(32) NOT NULL DEFAULT 'summary'
+CHECK (kind IN ('extraction','summary'));
 
 CREATE INDEX IF NOT EXISTS idx_video_tasks_claim
 ON video_tasks (status, next_retry_at, lease_until, created_at);

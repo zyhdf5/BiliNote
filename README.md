@@ -1,8 +1,8 @@
-# BiliNote-Go
+# BiliNote-Go Video Worker
 
-面向其它系统集成的视频总结服务。参考精简版 BiliNote 的业务链路，Go 版本只负责 URL 安全校验、任务编排、字幕/媒体获取、远程 ASR、远程 LLM 总结和 PostgreSQL 结果保存。
+面向其它系统集成的视频知识摄取 Worker。核心职责是 URL 安全校验、字幕/媒体获取、远程 ASR 和临时工作目录管理。
 
-## Pipeline
+## Knowledge ingestion pipeline
 
 ```text
 Video URL
@@ -29,55 +29,44 @@ Subtitle first
                      ↓
                  Transcript
                      ↓
-              LLM Map/Reduce
-                     ↓
-                  Summary
-                     ↓
-                PostgreSQL
-
-/tmp/bilinote/<task>-* is deleted after success/failure/cancellation.
+              Extraction Done
 ```
 
-## 不包含
+`POST /api/v1/extractions` **不会调用 Summary LLM**。这是 KnowledgeHub/WeKnora 视频知识摄取应使用的接口。
 
-- 本地 Whisper/Faster-Whisper/CUDA/CTranslate2
-- MinIO/S3
-- Redis/RabbitMQ/Kafka
-- Python runtime（运行镜像使用 yt-dlp standalone executable）
-- 视频/音频长期存储
+旧的 `POST /api/v1/summaries` 暂时保留用于兼容已有独立视频总结调用，它仍执行 Map/Reduce Summary。
+
+`/tmp/bilinote/<task>-*` 在成功、失败或取消后删除。
 
 ## 依赖
 
-- PostgreSQL
+- PostgreSQL（Worker queue/result state）
 - OpenAI-compatible `/v1/audio/transcriptions` ASR API
-- OpenAI-compatible `/v1/chat/completions` LLM API
 - yt-dlp standalone executable
 - FFmpeg
-
-## Docker 启动
-
-```bash
-cp .env.example .env
-# 修改 ASR_BASE_URL / ASR_MODEL / LLM_BASE_URL / LLM_MODEL / API KEY
-docker compose up --build -d
-```
-
-默认只绑定本机：
-
-```text
-http://127.0.0.1:8080
-```
-
-检查：
-
-```bash
-curl http://127.0.0.1:8080/healthz
-curl http://127.0.0.1:8080/readyz
-```
+- Summary API 兼容模式额外需要 OpenAI-compatible `/v1/chat/completions` LLM API
 
 ## API
 
-创建任务：
+### 创建 transcript extraction
+
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/extractions \
+  -H 'Content-Type: application/json' \
+  -d '{"url":"https://www.bilibili.com/video/BV..."}'
+```
+
+返回 `202`：
+
+```json
+{
+  "id": "...",
+  "kind": "extraction",
+  "status": "queued"
+}
+```
+
+### 兼容的 summary task
 
 ```bash
 curl -X POST http://127.0.0.1:8080/api/v1/summaries \
@@ -85,13 +74,32 @@ curl -X POST http://127.0.0.1:8080/api/v1/summaries \
   -d '{"url":"https://www.youtube.com/watch?v=..."}'
 ```
 
-查询：
+### 查询任务
 
 ```bash
 curl http://127.0.0.1:8080/api/v1/tasks/<task_id>
 ```
 
-取消：
+Extraction 成功结果包含：
+
+```json
+{
+  "id": "...",
+  "kind": "extraction",
+  "status": "succeeded",
+  "video": {},
+  "transcript": {
+    "language": "zh-CN",
+    "source": "subtitle",
+    "provider": "bilibili_player_api",
+    "segments": []
+  }
+}
+```
+
+Extraction 无论 `summary.keep_transcript` 如何配置都会保存 transcript，因为 transcript 是该任务的正式输出。
+
+### 取消
 
 ```bash
 curl -X POST http://127.0.0.1:8080/api/v1/tasks/<task_id>/cancel
@@ -105,7 +113,7 @@ curl -X POST http://127.0.0.1:8080/api/v1/tasks/<task_id>/cancel
 2. 没有可用字幕才下载最佳音频。
 3. FFmpeg 标准化为 16 kHz mono WAV。
 4. 调用远程 ASR。
-5. Transcript 统一进入 LLM Map/Reduce。
+5. Transcript 作为 extraction 的最终业务结果。
 
 Bilibili 使用专用链路：
 
@@ -113,42 +121,27 @@ Bilibili 使用专用链路：
 2. `x/player/wbi/v2` 获取字幕轨道，优先人工中文字幕，其次 AI 中文字幕，最后其它字幕。
 3. HTTP `412/429` 或 API code `-412/-352` 会识别为 Bilibili 风控；原生链路失败或无字幕时回退 yt-dlp。
 4. `b23.tv` 重定向最多跟随 5 跳，并对目标域名和解析地址重新执行安全校验。
-5. Bilibili 字幕正文仍只保留统一 `Transcript`，`provider=bilibili_player_api`；yt-dlp 字幕为 `provider=yt-dlp`。
-
-Bilibili Cookie 通过环境变量传入：
-
-```yaml
-bilibili:
-  cookie: "${BILIBILI_COOKIE}"
-  request_timeout: 20s
-  retries: 2
-  retry_backoff: 500ms
-```
-
-Cookie 为空也可尝试匿名 API；如果触发风控，会自动进入 yt-dlp fallback。
-
-## 临时数据
-
-容器使用 tmpfs：
-
-```yaml
-tmpfs:
-  - /tmp/bilinote:size=4g,mode=1777
-```
-
-每个任务使用独立随机工作目录，Pipeline `defer os.RemoveAll()` 清理。服务启动及每小时额外清理超过 `workspace.stale_after` 的孤儿目录，用于覆盖 OOM/SIGKILL 等无法执行 defer 的情况。
+5. Bilibili 字幕正文统一使用 `Transcript`；原生字幕 `provider=bilibili_player_api`，yt-dlp 字幕 `provider=yt-dlp`。
 
 ## PostgreSQL Queue
 
-不引入 Redis。Worker 使用 `FOR UPDATE SKIP LOCKED` 抢任务，并维护 lease：
+Worker 使用 `FOR UPDATE SKIP LOCKED` 抢任务并维护 lease。任务增加：
 
-- `queued`
-- `running`
-- `succeeded`
-- `failed`
-- `cancelled`
+```text
+kind = extraction | summary
+```
 
-同一 PostgreSQL 可以支撑多个 BiliNote-Go 实例。
+状态仍为：
+
+```text
+queued
+running
+succeeded
+failed
+cancelled
+```
+
+同一 PostgreSQL 可以支撑多个 Video Worker 实例。
 
 ## 目录
 
@@ -159,17 +152,12 @@ internal/video             source/registry/URL security
 internal/ytdlp             yt-dlp subprocess wrapper
 internal/media             ffmpeg wrapper
 internal/asr               OpenAI-compatible ASR
-internal/llm               OpenAI-compatible LLM
-internal/summary           Map/Reduce
-internal/pipeline          核心业务 Pipeline
+internal/llm               仅 summary 兼容模式
+internal/summary           仅 summary 兼容模式
+internal/pipeline          subtitle/ASR pipeline + task kind routing
 internal/task              task model
 internal/worker            PostgreSQL worker pool
 internal/repository        PostgreSQL repository/lease queue
 internal/workspace         临时目录清理
 migrations                 PostgreSQL schema
-prompts                    LLM prompts
 ```
-
-## 当前 MVP 边界
-
-已实现 Go 主链路、Docker、Bilibili 原生 metadata/player 字幕 API 与风控 fallback。任务错误分类、严格 subprocess 进程组清理、鉴权与真实站点端到端集成测试仍建议作为后续加固项。
