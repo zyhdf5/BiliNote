@@ -17,9 +17,18 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.23.x'
-          cache: true
+          cache: false
       - name: Check formatting
         run: |
           test -z "$(gofmt -l cmd internal)" || { gofmt -d cmd internal; exit 1; }
+      - name: Check module files
+        run: |
+          go mod tidy
+          echo '--- go.mod after tidy ---'
+          cat go.mod
+          echo '--- go.sum after tidy ---'
+          cat go.sum
+          git diff --exit-code -- go.mod go.sum
+          git ls-files --error-unmatch go.sum >/dev/null 2>&1
       - run: go test ./...
       - run: go vet ./...
