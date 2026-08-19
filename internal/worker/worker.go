@@ -114,9 +114,10 @@ func (w *WorkerPool) process(parent context.Context, owner string, t *task.Task)
 		w.Log.Error("task failed", "task_id", t.ID, "attempt", t.Attempts, "retry", retry, "error", err)
 		return
 	}
-	if err := w.Repo.Succeed(context.Background(), t.ID, result.Meta, result.Transcript, result.Summary, w.KeepTranscript); err != nil {
+	keepTranscript := w.KeepTranscript || t.IsExtraction()
+	if err := w.Repo.Succeed(context.Background(), t.ID, result.Meta, result.Transcript, result.Summary, keepTranscript); err != nil {
 		_ = w.Repo.Fail(context.Background(), t.ID, "save result: "+err.Error(), true, 5*time.Second, w.MaxAttempts)
 		return
 	}
-	w.Log.Info("task succeeded", "task_id", t.ID, "platform", result.Meta.Platform, "video_id", result.Meta.VideoID)
+	w.Log.Info("task succeeded", "task_id", t.ID, "kind", t.Kind, "platform", result.Meta.Platform, "video_id", result.Meta.VideoID)
 }

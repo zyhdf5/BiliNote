@@ -2,6 +2,13 @@ package task
 
 import "time"
 
+type Kind string
+
+const (
+	KindExtraction Kind = "extraction"
+	KindSummary    Kind = "summary"
+)
+
 type Status string
 
 const (
@@ -14,6 +21,7 @@ const (
 
 type Task struct {
 	ID               string     `json:"id"`
+	Kind             Kind       `json:"kind"`
 	SourceURL        string     `json:"source_url"`
 	Platform         string     `json:"platform,omitempty"`
 	SourceID         string     `json:"source_id,omitempty"`
@@ -31,4 +39,8 @@ type Task struct {
 	CreatedAt        time.Time  `json:"created_at"`
 	StartedAt        *time.Time `json:"started_at,omitempty"`
 	FinishedAt       *time.Time `json:"finished_at,omitempty"`
+}
+
+func (t *Task) IsExtraction() bool {
+	return t != nil && t.Kind == KindExtraction
 }
